@@ -1,0 +1,32 @@
+node_modules/
+.expo/
+.git/
+.idea/
+.vscode/
+*.iml
+*.js.map
+*.d.ts
+*.log
+
+# React Native specific
+ios/build/
+android/build/
+android/app/build/
+!android/app/src/main/res/
+
+# macOS specific
+.DS_Store
+
+# npm / yarn
+package-lock.json
+yarn.lock
+
+# Metro cache
+.rncache
+
+# local-only stuff
+.env
+.env.local
+
+# wearwise-app specific
+app.json
