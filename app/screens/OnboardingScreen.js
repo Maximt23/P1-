@@ -3,46 +3,45 @@ import { View, Text, Button, StyleSheet, Switch } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { usePermissions } from '../hooks/usePermissions';
 import { storageService } from '../services/StorageService';
-import { generateUniqueId } from '../utils/helpers';
 
 // Using basic components for foundation. Will be replaced by theme components from app/components/ui.
 export const OnboardingScreen = () => {
   const navigation = useNavigation();
-  const { requestLocationPermission } = usePermissions();
+  const { locationStatus, requestLocationPermission } = usePermissions();
 
   const [isResearchConsentGranted, setIsResearchConsentGranted] = useState(false);
   const [isWeatherEnhancementEnabled, setIsWeatherEnhancementEnabled] = useState(false);
+  const [showLocationHelperText, setShowLocationHelperText] = useState(false);
 
   const handleLocationToggle = async (value) => {
     setIsWeatherEnhancementEnabled(value);
     if (value) {
+      setShowLocationHelperText(true);
       await requestLocationPermission();
+    } else {
+      setShowLocationHelperText(false);
     }
   };
 
   const onContinue = async () => {
     try {
-      const currentPrefs = await storageService.getUserPreferences();
-      const locationPerms = await storageService.getLocationPermissionStatus(); // In a real scenario, this would come from the hook/OS
-
       const userPreferences = {
-        ...currentPrefs, // In case there are other prefs, start with them
         id: 1, // Using fixed ID for single-row upsert
         researchConsentGranted: isResearchConsentGranted,
         researchConsentStatus: isResearchConsentGranted ? 'granted' : 'declined',
         researchConsentTimestamp: new Date().toISOString(),
         researchConsentSource: 'onboarding',
         weatherEnhancementEnabled: isWeatherEnhancementEnabled,
-        locationPermissionStatus: locationPerms,
+        locationPermissionStatus: locationStatus || 'not_requested', // Use live status from hook
       };
 
       await storageService.saveUserPreferences(userPreferences);
-      console.log('User preferences saved.');
-
       navigation.navigate('OutfitSuggestions'); // Navigate to the main app screen
     } catch (error) {
       console.error('Failed to save user preferences:', error);
-      // Handle error, maybe show a message to the user
+      // In a real app, show a user-facing alert or toast message.
+      // For now, we log the error and still attempt to navigate.
+      navigation.navigate('OutfitSuggestions');
     }
   };
 
@@ -52,6 +51,7 @@ export const OnboardingScreen = () => {
       <View style={styles.option}>
         <Text style={styles.text}>Help improve the app by sharing anonymized data.</Text>
         <Switch
+          accessibilityLabel="Research Consent Toggle"
           value={isResearchConsentGranted}
           onValueChange={setIsResearchConsentGranted}
         />
@@ -59,10 +59,12 @@ export const OnboardingScreen = () => {
       <View style={styles.option}>
         <Text style={styles.text}>Enable weather-aware outfit suggestions.</Text>
         <Switch
+          accessibilityLabel="Weather Enhancement Toggle"
           value={isWeatherEnhancementEnabled}
           onValueChange={handleLocationToggle}
         />
       </View>
+      {showLocationHelperText && <Text style={styles.helperText}>This feature requires location permission to work.</Text>}
       <Button title="Continue" onPress={onContinue} />
     </View>
   );
@@ -91,5 +93,11 @@ const styles = StyleSheet.create({
   text: {
     flex: 1,
     marginRight: 16,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });
